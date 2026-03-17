@@ -1,3 +1,4 @@
+remove invalid pip install line
 instant,dteday,season,yr,mnth,hr,holiday,weekday,workingday,weathersit,temp,atemp,hum,windspeed,casual,registered,cnt,season_label,weather_label,weekday_label,workingday_label,time_category
 1,2011-01-01,1,0,1,0,0,6,0,1,0.24,0.2879,0.81,0.0,3,13,16,Spring,Clear,Saturday,Holiday,Dini Hari
 2,2011-01-01,1,0,1,1,0,6,0,1,0.22,0.2727,0.8,0.0,8,32,40,Spring,Clear,Saturday,Holiday,Dini Hari
