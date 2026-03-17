@@ -20,7 +20,7 @@ st.title("Bike Sharing Dashboard")
 st.markdown("Dashboard analisis data penyewaan sepeda")
 
 # Load data
-df = pd.read_csv("main_data.csv")
+df = pd.read_csv("dashboard/main_data.csv")
 
 # Mapping label
 season_map = {
