@@ -4,104 +4,97 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
-# Konfigurasi Halaman (Agar layout melebar dan lebih modern)
+# 1. Konfigurasi Halaman (Wajib di baris pertama setelah import)
 st.set_page_config(page_title="Bike Sharing Dashboard", layout="wide")
 sns.set_theme(style="whitegrid")
 
-# 1. Optimasi Load Data dengan Cache
+# 2. Fungsi Load Data dengan Cache agar Cepat
 @st.cache_data
 def load_data():
-    # Menggunakan path relatif agar aman saat di-deploy
+    # Menangani path file agar aman di lokal maupun Streamlit Cloud
     file_path = "dashboard/main_data.csv"
     if not os.path.exists(file_path):
-        file_path = "main_data.csv" # Backup jika file di root
+        file_path = "main_data.csv"
         
     df = pd.read_csv(file_path)
     
-    # Mapping label (Pastikan nama kolom di CSV adalah 'season' dan 'weathersit')
+    # Mapping label Season agar informatif (Sesuai saran reviewer)
     season_map = {1: "Spring", 2: "Summer", 3: "Fall", 4: "Winter"}
-    weather_map = {1: "Clear", 2: "Mist", 3: "Light Snow/Rain", 4: "Heavy Rain/Snow"}
-    
-    # Mengubah tipe data dan mapping dengan aman
     if 'season' in df.columns:
         df["season"] = df["season"].map(season_map)
-    if 'weathersit' in df.columns:
-        df["weathersit"] = df["weathersit"].map(weather_map)
-    
-    # Memastikan kolom 'hr' ada untuk grafik jam
+        
     return df
 
-try:
-    df = load_data()
+# Memanggil data ke dalam variabel df
+df = load_data()
 
-    # --- SIDEBAR ---
-    with st.sidebar:
-        st.title("🚲 Bike Sharing Analytics")
-        st.markdown("Analisis data penyewaan sepeda untuk proyek akhir.")
-        
-        # Filter Interaktif
-        if 'season' in df.columns:
-            selected_season = st.multiselect(
-                "Pilih Musim:",
-                options=df["season"].unique(),
-                default=df["season"].unique()
-            )
-            main_df = df[df["season"].isin(selected_season)]
-        else:
-            main_df = df
-
-    # --- MAIN PAGE ---
-    st.header("Dashboard Analisis Penyewaan Sepeda ✨")
+# 3. SIDEBAR (Filter Utama)
+with st.sidebar:
+    st.title("🚲 Bike Sharing Analytics")
+    st.markdown("### Filter Musim")
     
-    # 2. Layouting KPI (Metrics) - Menampilkan angka besar di atas
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        total_rentals = main_df["cnt"].sum()
-        st.metric("Total Penyewaan", value=f"{total_rentals:,}")
-    with col2:
-        avg_rentals = round(main_df["cnt"].mean(), 2)
-        st.metric("Rata-rata per Jam", value=avg_rentals)
-    with col3:
-        max_rentals = main_df["cnt"].max()
-        st.metric("Puncak Penyewaan", value=f"{max_rentals:,}")
+    # Filter Multiselect: User bisa pilih musim apa saja
+    selected_season = st.multiselect(
+        "Pilih Musim:",
+        options=df["season"].unique(),
+        default=df["season"].unique()
+    )
 
-    st.divider()
+# LOGIKA FILTER: 'main_df' adalah data yang sudah difilter oleh user
+# Ini kunci agar grafik JAM tidak statis (Sesuai revisi reviewer)
+main_df = df[df["season"].isin(selected_season)]
 
-    # 3. Grafik Bar: Musim & Cuaca (Berdampingan)
-    col_left, col_right = st.columns(2)
+# 4. MAIN PAGE
+st.header("Dashboard Analisis Penyewaan Sepeda ✨")
+st.markdown("Menampilkan tren data penyewaan sepeda periode 2011-2012.")
 
-    with col_left:
-        st.subheader("Penyewaan per Musim")
-        if 'season' in main_df.columns:
-            season_rental = main_df.groupby("season")["cnt"].sum().reset_index()
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(data=season_rental, x="season", y="cnt", palette="viridis", ax=ax)
-            ax.set_ylabel("Jumlah Rental")
-            ax.set_xlabel(None)
-            st.pyplot(fig)
+# Menampilkan Ringkasan Angka (Metrics)
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Total Penyewaan", value=f"{main_df['cnt'].sum():,}")
+with col2:
+    st.metric("Rata-rata per Jam", value=f"{main_df['cnt'].mean():.2f}")
+with col3:
+    st.metric("Puncak Penyewaan", value=f"{main_df['cnt'].max():,}")
 
-    with col_right:
-        st.subheader("Penyewaan per Kondisi Cuaca")
-        if 'weathersit' in main_df.columns:
-            weather_rental = main_df.groupby("weathersit")["cnt"].sum().reset_index()
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(data=weather_rental, x="weathersit", y="cnt", palette="rocket", ax=ax)
-            ax.set_ylabel("Jumlah Rental")
-            ax.set_xlabel(None)
-            st.pyplot(fig)
+st.divider()
 
-    # 4. Line Chart: Tren Jam (Full Width)
-    st.subheader("📈 Tren Rata-rata Penyewaan per Jam")
-    if 'hr' in main_df.columns:
-        hourly_rental = main_df.groupby("hr")["cnt"].mean().reset_index()
-        fig, ax = plt.subplots(figsize=(16, 6))
-        sns.lineplot(data=hourly_rental, x="hr", y="cnt", marker="o", color="#2E86C1", linewidth=2.5, ax=ax)
-        ax.set_xlabel("Jam (0-23)")
-        ax.set_ylabel("Rata-rata Penyewaan")
+# Bar Chart Musim & Cuaca
+col_left, col_right = st.columns(2)
+with col_left:
+    st.subheader("Penyewaan per Musim")
+    season_rental = main_df.groupby("season")["cnt"].sum().reset_index()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.barplot(data=season_rental, x="season", y="cnt", palette="viridis", ax=ax)
+    ax.set_ylabel("Jumlah Rental")
+    ax.set_xlabel(None)
+    st.pyplot(fig)
+
+with col_right:
+    st.subheader("Penyewaan per Kondisi Cuaca")
+    if 'weathersit' in main_df.columns:
+        weather_rental = main_df.groupby("weathersit")["cnt"].sum().reset_index()
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.barplot(data=weather_rental, x="weathersit", y="cnt", palette="magma", ax=ax)
+        ax.set_ylabel("Jumlah Rental")
+        ax.set_xlabel("Kategori Cuaca")
         st.pyplot(fig)
 
-    st.caption("Dashboard Analisis Bike Sharing Dataset - Proyek Dicoding")
+# 5. GRAFIK TREN JAM (Poin Utama Revisi)
+# Judul diperjelas dengan rentang waktu
+st.subheader("📈 Tren Rata-rata Penyewaan per Jam (2011-2012)")
 
-except Exception as e:
-    st.error(f"Terjadi kesalahan saat memuat data: {e}")
-    st.info("Pastikan file 'main_data.csv' berada di folder yang sama dengan script ini.")
+# Menghitung rata-rata menggunakan data yang SUDAH DIFILTER (main_df)
+hourly_rental = main_df.groupby("hr")["cnt"].mean().reset_index()
+
+fig, ax = plt.subplots(figsize=(16, 6))
+sns.lineplot(data=hourly_rental, x="hr", y="cnt", marker="o", color="#2E86C1", linewidth=2.5, ax=ax)
+
+# Memperjelas Label Sumbu (Sesuai kotak merah reviewer)
+ax.set_xlabel("Jam (Rentang Waktu 00:00 - 23:00)", fontsize=12)
+ax.set_ylabel("Rata-rata Jumlah Penyewaan", fontsize=12)
+ax.set_xticks(range(0, 24))
+
+st.pyplot(fig)
+
+st.caption("Dicoding Data Analysis Project - 2026")
